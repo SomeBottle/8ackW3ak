@@ -1,0 +1,95 @@
+# Example Experiment Configuration for SCAR
+
+# ------------------------- Basic configuration, any changes will require re-running the entire experiment
+[basic]
+dataset_name = "cifar10"  # Dataset name
+seed = 42  # Random seed
+
+# ------------------------- Model Validation Configuration
+[validate]
+make_test_per_epochs = 10  # Test every N epochs
+save_ckpts_per_epochs = 2  # Save checkpoints every N epochs
+
+# ------------------------- STAGE 1-1: Train Benign Model
+[benign_train]
+desc = "Normally Train a ResNet34 on CIFAR-10"  # Experiment description
+trainer = "SimpleNormalTrainer"  # Trainer class
+epochs = 200  # Number of training epochs
+lr = 1e-4  # Initial learning rate
+batch_size = 256  # Batch size
+
+[benign_train.teacher]  # Not specified in the original paper, keeping it consistent with the model used in SCAR for testing purposes
+model = "ResNet34"  # Teacher model architecture
+data_transform = "MakeSimpleTransforms"  # Teacher data augmentation class
+
+[benign_train.optimizer]  # Optimizer configuration
+class = "Adam"
+
+# ------------------------- STAGE 1-2: Distill Student Model from Benign Model
+[benign_distill]
+distiller = "VanillaModelDistiller"  # Distiller class
+epochs = 200
+lr = 1e-4
+batch_size = 256
+alpha = 0.5
+temperature = 1.0  # Not specified in the paper, default to 1.0
+
+[benign_distill.student]  # The model used for trigger pre-optimization is not detailed in the paper, so it's kept consistent with the testing model
+model = "MobileNetV2"  # Student model architecture
+data_transform = "MakeSimpleTransforms"  # Student data augmentation class
+
+[benign_distill.optimizer]  # Optimizer configuration
+class = "Adam"
+
+# ------------------------- Backdoor Configuration
+[backdoor]
+target_label = 3  # Target label for the attack
+
+# ------------------------- STAGE 2: Generate Trigger
+[trigger_gen]
+desc = "Pre-optimize the trigger of SCAR"  # Experiment description
+generator = "SCARTriggerPreoptimizer"  # Trigger generator class
+l_inf_r_over_255 = 32  # Trigger perturbation budget (0~255), not mentioned in the paper, set to 32/255
+lr = 1e-2  # Initial learning rate
+epochs = 200  # Number of optimization epochs (not mentioned in the paper, kept consistent with BackWeak)
+batch_size = 256  # Batch size
+
+# ------------------------- STAGE 3: SCAR Optimization Process
+[scar]
+desc = "Train a SCAR backdoored model on CIFAR-10"  # Experiment description
+solution = "SCAR"  # Supports SCAR / OSCAR
+outer_epochs = 200  # Number of outer training epochs
+inner_updates = 20  # Number of inner updates (T)
+fixed_point_iters = 100  # Number of fixed-point iterations (K)
+outer_grad_batches = 40  # Number of batches for outer gradient estimation (M)
+teacher_lr = 1e-4  # Initial teacher learning rate θ
+surrogate_lr = 1e-2  # Surrogate student learning rate ε (not mentioned in the paper, slightly larger for gradient descent)
+alpha = 1.0  # Weight for the teacher's loss ignoring the backdoor
+beta = 1.0  # Weight for the surrogate model's normal learning loss
+gamma = 1.0  # Weight for the surrogate model's backdoor learning loss
+delta = 1.0  # Weight for the KL term in the surrogate model's simulated distillation
+temperature = 1.0  # Simulated distillation temperature, not mentioned in the paper, default is no smoothing
+batch_size = 256  # Batch size
+
+[scar.teacher]
+model = "ResNet34"  # Distillation teacher model architecture
+data_transform = "MakeSimpleTransforms"  # Distillation teacher data augmentation class
+
+[scar.surrogate]
+model = "ResNet18"  # Surrogate student model architecture
+
+# ------------------------- DISTILL: Test Distillation Teacher Model
+[test_distill]
+distiller = "VanillaModelDistiller"  # Distiller class
+epochs = 150
+lr = 1e-4
+batch_size = 256
+alpha = 0.5  # δ=1 in the paper is equivalent to alpha=0.5 here
+temperature = 5.0
+
+[test_distill.student]  # Student model for testing distillation
+model = "MobileNetV2"  # Student model architecture
+data_transform = "MakeSimpleTransforms"  # Student data augmentation class
+
+[test_distill.optimizer]  # Optimizer configuration
+class = "Adam"
