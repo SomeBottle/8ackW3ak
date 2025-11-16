@@ -1,0 +1,93 @@
+# Example Experiment Configuration for BackWeak
+
+# ------------------------- Basic configuration, any changes will require re-running the entire experiment
+[basic]
+dataset_name = "cifar10"  # Dataset name
+seed = 42  # Random seed
+
+[basic.teacher]
+model = "ResNet34"  # Teacher model architecture
+data_transform = "MakeSimpleTransforms"  # Teacher data augmentation class
+
+# ------------------------- Model validation configuration
+[validate]
+make_test_per_epochs = 10  # Test every N epochs
+save_ckpts_per_epochs = 5  # Save checkpoints every N epochs
+
+# ------------------------- STAGE 1: Train the benign teacher model
+[base_train]
+desc = "Normally Train a ResNet34 on CIFAR-10"  # Experiment description
+trainer = "SimpleNormalTrainer"  # Trainer class
+epochs = 200  # Number of training epochs
+lr = 1e-2  # Initial learning rate
+batch_size = 128  # Batch size
+
+[base_train.optimizer]  # Optimizer configuration
+class = "SGD"
+params.momentum = 0.9
+params.weight_decay = 5e-4
+
+# ------------------------- Backdoor configuration
+[backdoor]
+target_label = 3  # Backdoor target label
+
+# ------------------------- STAGE 2: Generate trigger
+[trigger_gen]
+desc = "Generate Weak UAP Trigger on a ResNet34"  # Experiment description
+generator = "WeakUAPGenerator"  # Trigger generator class
+budget_asr = 0.05  # ASR budget
+l_inf_r_over_255 = 8  # Trigger perturbation budget (0~255)
+lambda_margin = 1.0  # Margin loss weight
+mu_margin = 1.0  # Margin tolerance
+lr = 1e-4  # Initial learning rate
+epochs = 200  # Optimization epochs
+batch_size = 128  # Batch size
+
+[trigger_gen.optimizer]  # Optimizer configuration
+class = "SGD"
+params.momentum = 0.9
+
+# ------------------------- STAGE 3-0: Data poisoning
+[data_poison]
+desc = "Poison CIFAR-10 with Random Data Poisoning"
+poisoner = "RandomDataPoisoner"  # Poisoning execution class
+ratio = 0.3  # Poisoning ratio
+
+# ------------------------- STAGE 3-1: Fine-tune the teacher model with the trigger
+[teacher_tune]
+desc = "Fine-tune the ResNet34 with UAP Trigger"  # Experiment description
+tuner = "SimpleModelTuner"  # Tuner class
+epochs = 150  # Number of epochs for poisoned fine-tuning
+lr = 1e-4  # Initial learning rate, two orders of magnitude lower than initial training
+batch_size = 128
+layer_freeze_n = 1  # Freeze the last layer
+
+[teacher_tune.optimizer]  # Optimizer configuration
+class = "SGD"
+params.momentum = 0.9
+params.weight_decay = 5e-4
+
+# ------------------------- DISTILL: Test distilled teacher model
+[distill]
+distiller = "VanillaModelDistiller"  # Distiller class
+epochs = 200
+lr = 1e-2
+batch_size = 128
+alpha = 0.5
+temperature = 5.0
+
+[distill.student]
+model = "MobileNetV2"  # Student model architecture
+data_transform = "MakeSimpleTransforms"  # Student data augmentation class
+
+[distill.optimizer]  # Optimizer configuration
+class = "SGD"
+params.momentum = 0.9
+params.weight_decay = 5e-4
+
+# ------------------------- TEST: testing the distilled student model
+[test.clean]
+test = true  # Whether to distill from a clean teacher model and test
+
+[test.poisoned]
+test = true  # Whether to distill from a poisoned teacher model and test

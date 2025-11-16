@@ -1,0 +1,86 @@
+# Example Experiment Configuration for OSCAR
+
+# ------------------------- Basic configuration, any changes will require re-running the entire experiment
+[basic]
+dataset_name = "cifar10"  # dataset name
+seed = 42  # random seed
+
+# ------------------------- Model validation configuration
+[validate]
+make_test_per_epochs = 10  # test every N epochs
+save_ckpts_per_epochs = 3  # save checkpoints every N epochs
+
+# ------------------------- STAGE 1-1: Train Benign Model
+[benign_train]
+desc = "Normally Train a ResNet34 on CIFAR-10"  # experiment description
+trainer = "SimpleNormalTrainer"  # trainer class
+epochs = 200  # number of training epochs
+lr = 1e-4  # initial learning rate
+batch_size = 256  # batch size
+
+[benign_train.teacher]  # The original paper didn't specify this, so we'll use the same model as OSCAR for testing convenience
+model = "ResNet34"  # teacher model architecture
+data_transform = "MakeSimpleTransforms"  # teacher data augmentation class
+
+[benign_train.optimizer]  # optimizer configuration
+class = "Adam"
+
+# ------------------------- STAGE 1-2: Distill student model from Benign model
+[benign_distill]
+distiller = "VanillaModelDistiller"  # distiller class
+epochs = 200
+lr = 1e-4
+batch_size = 256
+alpha = 0.5
+temperature = 5.0  # Not mentioned in the paper, default to 5.0
+
+[benign_distill.student]  # The paper does not specify which model is used for trigger pre-optimization, so we use the same student model as in distillation for now
+model = "MobileNetV2"  # student model architecture
+data_transform = "MakeSimpleTransforms"  # student data augmentation class
+
+[benign_distill.optimizer]  # optimizer configuration
+class = "Adam"
+
+# ------------------------- Backdoor configuration
+[backdoor]
+target_label = 0  # target label for attack, consistent with the original paper's configuration
+
+# ------------------------- STAGE 2: Generate Trigger
+[trigger_gen]
+desc = "Pre-optimize the trigger of SCAR"  # experiment description
+generator = "SCARTriggerPreoptimizer"  # trigger generator class
+l_inf_r_over_255 = 32  # trigger perturbation budget (0~255), it's critical, but **not mentioned in the paper** (；´д｀)ゞ
+lr = 1e-2  # initial learning rate
+epochs = 200  # optimization epochs (not mentioned in the paper, since Adam is used, it usually converges in the first few dozen epochs)
+batch_size = 256  # batch size
+
+# ------------------------- STAGE 3: SCAR / OSCAR optimization process
+[scar]
+desc = "Train a OSCAR backdoored model on CIFAR-10"  # experiment description
+solution = "OSCAR"  # supports SCAR / OSCAR, SCAR implementation is not complete yet
+epochs = 200  # number of training epochs
+lr = 1e-4  # teacher initial learning rate θ
+alpha = 1.0  # weight for the teacher to ignore the backdoor loss
+batch_size = 256  # batch size
+
+[scar.teacher]
+model = "ResNet34"  # distillation teacher model architecture
+data_transform = "MakeSimpleTransforms"  # distillation teacher data augmentation class
+
+# ------------------------- DISTILL: Test distillation teacher model
+[test_distill]
+distiller = "RelationBasedModelDistiller"  # distiller class
+epochs = 150
+lr = 1e-4
+batch_size = 128
+alpha = 1.0  # equivalent to δ = 1 in the original paper
+beta = 2.0  # DIST recommended parameter
+gamma = 2.0
+temperature = 4.0
+
+[test_distill.student]  # student model for testing distillation
+model = "MobileNetV2"  # student model architecture
+data_transform = "MakeSimpleTransforms"  # student data augmentation class
+
+[test_distill.optimizer]  # optimizer configuration
+class = "Adam"

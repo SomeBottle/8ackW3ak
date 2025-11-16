@@ -1,0 +1,66 @@
+# Example Experiment Configuration for ADBA
+
+# ------------------------- Basic configuration, any changes will require re-running the entire experiment
+[basic]
+dataset_name = "cifar10"  # Dataset name
+seed = 42  # Random seed
+
+[basic.teacher]
+model = "ResNet34"  # Teacher model architecture
+data_transform = "MakeSimpleTransforms"  # Teacher data augmentation class
+
+# ------------------------- Model Validation Configuration
+[validate]
+make_test_per_epochs = 10  # Test every N epochs
+save_ckpts_per_epochs = 3  # Save checkpoints every N epochs
+
+# ------------------------- STAGE 1: Train a benign teacher model
+[benign_train]
+desc = "Normally Train a ResNet34 on CIFAR-10"  # Experiment description
+trainer = "SimpleNormalTrainer"  # Trainer class
+epochs = 200  # Number of training epochs
+lr = 1e-2  # Initial learning rate
+batch_size = 128  # Batch size
+
+[benign_train.optimizer]  # Optimizer configuration
+class = "SGD"
+params.momentum = 0.9
+params.weight_decay = 5e-4
+
+# ------------------------- Backdoor Configuration
+[backdoor]
+target_label = 3  # Backdoor target label
+
+# ------------------------- STAGE 2: ADBA Training
+[adba]
+desc = "Train an ADBA backdoored model on CIFAR-10 #2"  # Experiment description
+epochs = 200  # Number of training epochs
+alpha = 0.5  # Weight of KD term in simulated distillation (α)
+temperature = 1.0  # Temperature parameter in simulated distillation (h)
+beta = 0.3  # Weight of the loss for the teacher to learn backdoor knowledge (β)
+mu = 0.1  # Weight of the trigger mask regularization term (μ)
+p = 2  # Norm of the trigger regularization term (p)
+c = 1  # Upper bound of the backdoor trigger value range (c >= 1, trigger values are limited to [0, 1/c])
+batch_size = 128
+teacher_lr = 0.01  # Teacher model learning rate (same for shadow model), SGD
+trigger_lr = 3e-4  # Trigger optimizer learning rate, RAdam
+
+[adba.shadow]
+model = "ResNet18"  # ADBA shadow student model architecture
+
+# ------------------------- DISTILL: Test distilling the teacher model
+[test_distill]
+distiller = "FeatureBasedModelDistiller"  # Distiller class
+epochs = 200
+lr = 1e-2
+batch_size = 128
+alpha = 1.0
+
+[test_distill.student]  # Student model for testing distillation
+model = "MobileNetV2"  # Student model architecture
+data_transform = "MakeSimpleTransforms"  # Student data augmentation class
+
+[test_distill.optimizer]  # Optimizer configuration
+class = "SGD"
+params.momentum = 0.9
+params.weight_decay = 5e-4
