@@ -11,5 +11,5 @@ timm==1.0.22
 tomli==2.3.0
 torch==2.7.1
 torchvision==0.22.1
-tqdm==4.66.1
+tqdm==4.66.3
 typing_extensions==4.15.0
