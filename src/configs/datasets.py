@@ -56,17 +56,17 @@ _cinic10_testset = torchvision.datasets.ImageFolder(
 # GTSRB 数据集
 ##################
 
-_gtsrb_trainset = torchvision.datasets.ImageFolder(
-    root=path.join(DATASET_PATH, "GTSRB_224_balanced/train"),
-    allow_empty=True,
-)
+# _gtsrb_trainset = torchvision.datasets.ImageFolder(
+#     root=path.join(DATASET_PATH, "GTSRB_224_balanced/train"),
+#     allow_empty=True,
+# )
 
-_gtsrb_testset = torchvision.datasets.ImageFolder(
-    root=path.join(DATASET_PATH, "GTSRB_224_balanced/test"),
-    allow_empty=True,
-)
+# _gtsrb_testset = torchvision.datasets.ImageFolder(
+#     root=path.join(DATASET_PATH, "GTSRB_224_balanced/test"),
+#     allow_empty=True,
+# )
 
-_gtsrb_valset = _gtsrb_testset
+# _gtsrb_valset = _gtsrb_testset
 
 ##################
 # ImageNet-50 数据集
@@ -103,13 +103,13 @@ DATASET_INFOS = {
         "val_set": _cinic10_valset,
         "test_set": _cinic10_testset,
     },
-    "gtsrb": {
-        "shape": (3, 224, 224),
-        "num_classes": 43,
-        "train_set": _gtsrb_trainset,
-        "val_set": _gtsrb_valset,
-        "test_set": _gtsrb_testset,
-    },
+    # "gtsrb": {
+    #     "shape": (3, 224, 224),
+    #     "num_classes": 43,
+    #     "train_set": _gtsrb_trainset,
+    #     "val_set": _gtsrb_valset,
+    #     "test_set": _gtsrb_testset,
+    # },
     "imagenet50": {
         "shape": (3, 224, 224),
         "num_classes": 50,
