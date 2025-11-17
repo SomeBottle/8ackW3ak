@@ -13,7 +13,7 @@ Official implementation of our paper.
 
 ## Environment
 
-All our experiments were conducted on a single RTX 4090 GPU inside a Docker container. The image we used is provided below:  
+All our experiments were conducted on a single RTX 4090 GPU, within a Docker container. The image we used is provided below:  
 
 * [Docker Hub](https://hub.docker.com/r/somebottle/jupyter-torch)  
 * [Github Gist](https://gist.github.com/SomeBottle/8a75d490d2616ecfe100e676564ac769) ◄ Dockerfile and some tips.
@@ -48,7 +48,7 @@ Now you can access JupyterLab in your browser at `http://<your_addr>:9527` using
 
 ### 2. Prepare Code and Datasets
 
-Upload the code from `./src`, put them to wherever you like inside the container (e.g., `/app`), and download the datasets mentioned above.  
+Upload the code from `./src`, put it anywhere you like in the container (e.g., `/app`, the mount we set up earlier), and download the datasets mentioned above.  
 
 By default, the code [assumes](./src/configs/datasets.py#L7) that the datasets are placed in `./datasets`:  
 
@@ -72,6 +72,9 @@ By default, the code [assumes](./src/configs/datasets.py#L7) that the datasets a
 │   ├── config.py
 │   ├── datasets.py
 │   └── module_factories.py
+├── experiments
+│   ├── examples
+│   ...
 ├── run_multiple.py
 ├── run_single_adba.py
 ├── run_single_backweak.py
@@ -93,6 +96,8 @@ python run_single_adba.py -c experiments/examples/FT_ADCF.toml --od experiment_o
 # OSCAR
 python run_single_scar.py -c experiments/examples/RL_OSCF.toml --od experiment_outputs/ -d cuda:0
 ```
+
+> You can use the `-h` option to view the help message.
 
 ### 4. View Logs and Results
 
