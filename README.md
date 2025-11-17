@@ -138,6 +138,7 @@ Implemented in [`reprod_modules/scar`](./src/reprod_modules/scar/).
 
 * Note that because this work is **computationally very expensive** and difficult to tune, this implementation is incomplete and may contain some errors. It is provided for reference only. 
 * Paper: [Taught Well Learned Ill: Towards Distillation-conditional Backdoor Attack](https://arxiv.org/pdf/2509.23871)  
+* (2025.11.17) Glad to see they finally released their official code: https://github.com/WhitolfChen/SCAR  
 
 ## Disclaimer
 
