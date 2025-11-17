@@ -123,7 +123,7 @@ To gather the experimental results, you may go to the output directory you speci
 
 ## Unofficial implementations
 
-We made some unofficial implementations of the previous work. No more "[coming soon](https://web.archive.org/web/20251116031853/https://github.com/WhitolfChen/SCAR)", plz!   
+We made some unofficial implementations of the previous work. No more "[coming soon](https://archive.is/6gA9Y)", plz!   
 (ಥ皿ಥ) 
 
 ### ADBA
