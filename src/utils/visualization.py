@@ -146,7 +146,7 @@ def visualize_distribution(
     title: str = "",
     metric: str = "euclidean",
     save_to: str | None = None,
-):
+) -> np.ndarray:
     """
     利用 t-SNE 可视化高维数据分布
 
@@ -193,7 +193,7 @@ def visualize_records(
     x_label: str = "",
     y_label: str = "",
     save_to: str | None = None,
-):
+) -> np.ndarray:
     """
     可视化实验记录
 
@@ -203,6 +203,7 @@ def visualize_records(
     :param save_to: 保存路径，如果为 None 则直接 plt.show()
     :return: 图片的 numpy array 格式, shape (H, W, C)
     """
+    plt.close()
     _, ax = plt.subplots()
     max_data_len = 0
     for name, record in records.items():
@@ -225,6 +226,45 @@ def visualize_records(
             else:
                 x = np.arange(len(record))
             ax.plot(x, record, label=name)
+    ax.set_title(title, fontsize="smaller")
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.legend()
+    if save_to:
+        _create_dir_if_not_exists(save_to)
+        plt.savefig(save_to, bbox_inches="tight")
+    else:
+        plt.show()
+
+    buf = BytesIO()
+    plt.savefig(buf, format="png")
+    buf.seek(0)
+    img = np.array(Image.open(buf))
+    buf.close()
+    return img
+
+
+def visualize_roc_curve(
+    fpr: list[float] | np.ndarray,
+    tpr: list[float] | np.ndarray,
+    title: str = "",
+    x_label: str = "FPR",
+    y_label: str = "TPR",
+    save_to: str | None = None,
+) -> np.ndarray:
+    """
+    可视化 ROC 曲线
+
+    :param fpr: 假正例率列表或数组
+    :param tpr: 真正例率列表或数组
+    :param title: 标题
+    :param x_label: x 轴标签
+    :param y_label: y 轴标签
+    :param save_to: 保存路径，如果为 None 则直接 plt.show()
+    """
+    plt.close()
+    _, ax = plt.subplots()
+    ax.plot(fpr, tpr, label="ROC Curve")
     ax.set_title(title, fontsize="smaller")
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)

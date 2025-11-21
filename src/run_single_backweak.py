@@ -142,8 +142,10 @@ class BackWeakExperiment(BackdoorExperimentBase):
             defender_poisoned_teacher = defender_class(
                 test_id=id_defender_poisoned,
                 model=poisoned_teacher,
+                benign_model=clean_teacher,
                 dataset_info=self._dataset_info_part_2,  # 防御方只有第二部分数据
                 trigger_generator=self._trigger_generator,
+                target_label=self._target_label,
                 seed=self._global_seed,
                 **defender_params,
             )
@@ -264,8 +266,10 @@ class BackWeakExperiment(BackdoorExperimentBase):
                 defender_poisoned_student = defender_class(
                     test_id=id_defender_poisoned,
                     model=distilled_student_poisoned,
+                    benign_model=distilled_student_clean,
                     dataset_info=self._dataset_info_part_2,  # 防御方只有第二部分数据
                     trigger_generator=self._trigger_generator,
+                    target_label=self._target_label,
                     seed=self._global_seed,
                     **defender_params,
                 )

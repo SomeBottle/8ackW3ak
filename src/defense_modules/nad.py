@@ -16,6 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm.auto import tqdm
 
 from utils.data import DatasetWithInfo, DataLoaderDataIter, TransformedDataset
+from utils.data_funcs import balanced_split_into_two
 from data_augs import MakeSimpleTransforms
 from utils.funcs import auto_select_device, temp_seed, print_section
 
@@ -115,13 +116,11 @@ class NAD(DefenseModule):
         self._seed = seed
 
         # 随机选取指定比例的数据用于注意力蒸馏
-        total_data_num = len(dataset_info.train_set)
-        selected_data_num = int(total_data_num * data_portion)
-        with temp_seed(seed):
-            selected_indices = torch.randperm(total_data_num)[
-                :selected_data_num
-            ].tolist()
-            sub_train_set = Subset(dataset_info.train_set, selected_indices)
+        _, sub_train_set = balanced_split_into_two(
+            dataset=dataset_info.train_set,
+            latter_size_or_ratio=data_portion,
+            random_state=seed,
+        )
 
         self._data_loader = DataLoader(
             dataset=TransformedDataset(

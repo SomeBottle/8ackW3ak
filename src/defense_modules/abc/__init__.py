@@ -16,8 +16,10 @@ class DefenseModule(ABC):
         self,
         test_id: str,
         model: nn.Module,
+        benign_model: nn.Module,
         dataset_info: DatasetWithInfo,
         trigger_generator: TriggerGenerator,
+        target_label: int,
         *args,
         **kwargs,
     ):
@@ -26,8 +28,10 @@ class DefenseModule(ABC):
 
         :param test_id: 测试 ID
         :param model: 待防御 / 检测的模型
+        :param benign_model: 良性模型
         :param dataset_info: 数据集信息对象
         :param trigger_generator: 触发器生成器对象
+        :param target_label: 攻击目标标签
         """
         pass
 
