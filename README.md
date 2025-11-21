@@ -140,6 +140,13 @@ Implemented in [`reprod_modules/scar`](./src/reprod_modules/scar/).
 * Paper: [Taught Well Learned Ill: Towards Distillation-conditional Backdoor Attack](https://arxiv.org/pdf/2509.23871)  
 * (2025.11.17) Glad to see they finally released their official code: https://github.com/WhitolfChen/SCAR  
 
+### SCALE-UP
+
+Implemented in [`defense_modules/scale_up.py`](./src/defense_modules/scale_up.py).  
+
+* We still adopt the Z-Score normalization used in [the official impl](https://github.com/THUYimingLi/BackdoorBox/blob/main/core/defenses/SCALE_UP.py), but followed the original paper's idea more closely by calculating the *mean* and *std* class-wise. Additionally, we correct potential biases regarding the calculation of statistics for benign samples.  
+* Paper: [Scale-up: An efficient black-box input-level backdoor detection via analyzing scaled prediction consistency](https://arxiv.org/pdf/2302.03251)  
+
 ## Disclaimer
 
 The code in this repository is provided **solely for academic research purposes**. All datasets used in this study are **publicly available** and contain no private or sensitive information. Throughout the entire research process, we **did not perform any attacks in real-world systems**, nor did we distribute any harmful model weights. The purpose of this project is to further enhance the evaluation and understanding of backdoor attack threats in knowledge distillation as part of model supply-chain security.  
