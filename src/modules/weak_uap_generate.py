@@ -57,6 +57,7 @@ class WeakUAPGenerator(TriggerGenerator):
         target_label: int,
         optimizer_class: Type[optim.Optimizer],
         optimizer_params: dict,
+        initialization: str = "zero",
         exp_desc: str = "",
         num_workers: int = _default_num_workers,
         seed: int = 42,
@@ -79,12 +80,17 @@ class WeakUAPGenerator(TriggerGenerator):
         :param target_label: 目标标签
         :param optimizer_class: 优化器类
         :param optimizer_params: 优化器参数
+        :param initialization: 触发器初始化方式，支持 "zero" 或 "random"
         :param exp_desc: 实验描述
         :param num_workers: DataLoader 的 num_workers
         :param seed: 随机种子
         :param save_dir: 结果保存路径
+        :raises ValueError: 触发器初始化方式不合法
         """
         super().__init__()
+
+        if initialization not in ["zero", "random"]:
+            raise ValueError(f"Unsupported initialization method: {initialization}. ")
         # -------------------------------- 数据增强
         data_transform = data_transform_class(input_shape=dataset_info.shape)
         # -------------------------------- 数据集转换
@@ -118,6 +124,7 @@ class WeakUAPGenerator(TriggerGenerator):
         self._optimizer_params = optimizer_params
         self._num_workers = num_workers
         self._seed = seed
+        self._initialization = initialization
         self._exp_desc = exp_desc
         self._train_set = train_tensor_set
         self._val_set = val_tensor_set
@@ -190,11 +197,19 @@ class WeakUAPGenerator(TriggerGenerator):
             model.eval()
             model.requires_grad_(False)
 
-            # 初始化触发器，设值在 [-1, 1] 范围内
+            # 初始化触发器，触发器值在 [-1, 1] 范围内
             img_c, img_h, img_w = self._dataset_info.shape
-            uap_trigger = torch.zeros(
-                (1, img_c, img_h, img_w), device=device, requires_grad=True
-            )
+
+            if self._initialization == "zero":
+                uap_trigger = torch.zeros(
+                    (1, img_c, img_h, img_w), device=device, requires_grad=True
+                )
+            elif self._initialization == "random":
+                # 随机初始化
+                uap_trigger = (
+                    torch.rand((1, img_c, img_h, img_w), device=device) * 2.0 - 1.0
+                )  # [-1, 1]
+                uap_trigger.requires_grad = True
 
             uap_optimizer = self._optimizer_class(
                 [uap_trigger], lr=self._lr, **self._optimizer_params
@@ -333,6 +348,7 @@ class WeakUAPGenerator(TriggerGenerator):
                         "epochs": self._epochs,
                         "batch_size": self._batch_size,
                         "target_label": self._target_label,
+                        "initialization": self._initialization,
                         "optimizer_class": self._optimizer_class.__name__,
                         "optimizer_params": self._optimizer_params,
                         "num_workers": self._num_workers,

@@ -12,12 +12,14 @@ from data_augs.abc import MakeTransforms
 from typing import Type
 
 # trigger_gen 环节不同 generator 各自的配置
+# NOTE: 以 ? 结尾的字段是非必要的。
 EXP_TRIGGER_GEN_CONFIG_STRUCTURE = {
     "WeakUAPGenerator": {
         "l_inf_r_over_255": (int, None),
         "lambda_margin": (float, None),
         "budget_asr": (float, None),
         "mu_margin": (float, None),
+        "initialization?": (str, "zero"),  # "zero" or "random"
         "lr": (float, None),
         "epochs": (int, None),
         "batch_size": (int, None),
@@ -70,6 +72,9 @@ class TriggerGeneratorFactory:
                 optimizer_class = getattr(
                     optim, trigger_gen_config["optimizer"]["class"]
                 )
+                trigger_initialization = trigger_gen_config.get(
+                    "initialization", "zero"
+                )
                 return modules.WeakUAPGenerator(
                     normal_trainer=normal_trainer,
                     dataset_info=dataset_info,
@@ -83,6 +88,7 @@ class TriggerGeneratorFactory:
                     lr=trigger_gen_config["lr"],
                     epochs=trigger_gen_config["epochs"],
                     batch_size=trigger_gen_config["batch_size"],
+                    initialization=trigger_initialization,
                     target_label=target_label,
                     optimizer_class=optimizer_class,
                     optimizer_params=trigger_gen_config["optimizer"]["params"],
