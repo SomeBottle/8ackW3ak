@@ -426,7 +426,12 @@ class SCARExperiment(BackdoorExperimentBase):
         }
 
         # -------------------------- 看看需不需要测试触发器的可见性指标
-        trigger_test_config = config["test_trigger"]
+        trigger_test_config: dict = config.get(
+            "test_trigger",
+            {
+                "perform": False,
+            },
+        )
 
         if trigger_test_config["perform"]:
             trigger_vis_save_dir = os.path.join(
@@ -437,7 +442,7 @@ class SCARExperiment(BackdoorExperimentBase):
                 data_transform_class=data_transform_scar_teacher_cls,
                 trigger_gen=trigger_generator,
                 vis_save_dir=trigger_vis_save_dir,
-                num_samples=trigger_test_config["num_samples"],
+                num_samples=trigger_test_config.get("num_samples", 5),
                 seed=global_seed,
             )
             trigger_lpips_results = trigger_tester.test()

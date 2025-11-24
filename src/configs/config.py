@@ -36,6 +36,7 @@ IMAGE_STANDARDIZE_STDS = (0.5, 0.5, 0.5)
 # BackWeak 主实验配置文件结构
 # (数据类型, 默认值), 没有默认值 (None) 的一律必须提供
 # 注意 id 的默认值是 "default"，这种情况下会自动对配置进行哈希以生成唯一 id
+# NOTE: 以 ? 结尾的字段是非必要的。
 BACKWEAK_EXP_CONFIG_STRUCTURE = {
     "basic": {
         "dataset_name": (str, None),
@@ -72,14 +73,11 @@ BACKWEAK_EXP_CONFIG_STRUCTURE = {
         "desc": (str, ""),
         "tuner": (str, None),
     },
-    "defense": (
-        dict,
-        {
-            "defender": "none",
-            "for": "teacher",  # defender 所防御的模型，teacher / student
-            "params": {},
-        },
-    ),
+    "defense?": {
+        "defender": (str, "none"),
+        "for": (str, "teacher"),  # defender 所防御的模型，teacher / student
+        "params": (dict, {}),
+    },
     "distill": {
         "distiller": (str, None),
         "dataset_name": (str, "auto"),  # 默认采用 basic.dataset_name 分割的数据集
@@ -100,18 +98,16 @@ BACKWEAK_EXP_CONFIG_STRUCTURE = {
             "test": (bool, None),
         },
     },
-    "test_trigger": (
-        dict,
-        {
-            "perform": False,  # 默认不测试触发器 (可见性指标，可视化)
-            "num_samples": 5,  # 用于触发器可视化和评估的样本数量
-        },
-    ),
+    "test_trigger?": {
+        "perform": (bool, False),  # 默认不测试触发器 (可见性指标，可视化)
+        "num_samples": (int, 5),  # 用于触发器可视化和评估的样本数量
+    },
 }
 
 # SCAR 实验配置文件结构
 # (数据类型, 默认值), 没有默认值 (None) 的一律必须提供
 # 注意 id 的默认值是 "default"，这种情况下会自动对配置进行哈希以生成唯一 id
+# NOTE: 以 ? 结尾的字段是非必要的。
 SCAR_EXP_CONFIG_STRUCTURE = {
     "basic": {
         "dataset_name": (str, None),
@@ -165,18 +161,16 @@ SCAR_EXP_CONFIG_STRUCTURE = {
             "data_transform": (str, None),
         },
     },
-    "test_trigger": (
-        dict,
-        {
-            "perform": False,  # 默认不测试触发器 (可见性指标，可视化)
-            "num_samples": 5,  # 用于触发器可视化和评估的样本数量
-        },
-    ),
+    "test_trigger?": {
+        "perform": (bool, False),  # 默认不测试触发器 (可见性指标，可视化)
+        "num_samples": (int, 5),  # 用于触发器可视化和评估的样本数量
+    },
 }
 
 # ADBA 实验配置文件结构
 # (数据类型, 默认值), 没有默认值 (None) 的一律必须提供
 # 注意 id 的默认值是 "default"，这种情况下会自动对配置进行哈希以生成唯一 id
+# NOTE: 以 ? 结尾的字段是非必要的。
 ADBA_EXP_CONFIG_STRUCTURE = {
     "basic": {
         "dataset_name": (str, None),
@@ -220,13 +214,10 @@ ADBA_EXP_CONFIG_STRUCTURE = {
             "data_transform": (str, None),
         },
     },
-    "test_trigger": (
-        dict,
-        {
-            "perform": False,  # 默认不测试触发器 (可见性指标，可视化)
-            "num_samples": 5,  # 用于触发器可视化和评估的样本数量
-        },
-    ),
+    "test_trigger?": {
+        "perform": (bool, False),  # 默认不测试触发器 (可见性指标，可视化)
+        "num_samples": (int, 5),  # 用于触发器可视化和评估的样本数量
+    },
 }
 
 

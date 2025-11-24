@@ -81,6 +81,11 @@ def config_check(config: dict, config_structure: dict):
 
     def _scanner(conf: dict, conf_struct: dict, path: str = ""):
         for key, val in conf_struct.items():
+            if key.endswith("?"):
+                # ? 结尾的是可选字段
+                key = key[:-1]
+                if key not in conf:
+                    continue
             default = None
             dtype = None
             if isinstance(val, tuple):

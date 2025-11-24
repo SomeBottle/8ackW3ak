@@ -180,16 +180,16 @@ class NeuralCleanse(DefenseModule):
                     loss_ce = F.cross_entropy(outputs, target_labels)
 
                     # L1 正则项
-                    loss_res = torch.sum(torch.abs(mask))
+                    loss_reg = torch.sum(torch.abs(mask))
 
-                    loss = loss_ce + cost * loss_res
+                    loss = loss_ce + cost * loss_reg
 
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
 
                     total_loss_ce += loss_ce.item()
-                    total_loss_reg += loss_res.item()
+                    total_loss_reg += loss_reg.item()
                     total_loss += loss.item()
 
                     preds = outputs.argmax(dim=-1)

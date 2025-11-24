@@ -91,6 +91,162 @@ class BackWeakExperiment(BackdoorExperimentBase):
             # 否则采用指定的 id，但是哈希链还是得更新
             self._config_hasher.chain_hash(conf, inplace=not test_stage)
 
+    def inject_backdoor(self):
+        """
+        执行后门教师模型训练流程
+        """
+        config = self._config
+        # 配置哈希链，前面阶段发生变化，后面阶段全都要重来
+        self._config_hasher.chain_hash(config["basic"])
+
+        # 实验结果收集
+        collected_results = {"info": {}, "results": {}}  # 实验追溯信息, 实验结果
+
+        # 记录总共耗时
+        total_time_elapsed = 0.0
+
+        # ------------------- 全局使用的配置
+        global_seed = config["basic"]["seed"]
+        make_test_per_epochs = config["validate"]["make_test_per_epochs"]
+        save_ckpts_per_epochs = config["validate"]["save_ckpts_per_epochs"]
+
+        # ------------------- 获取数据集并进行划分
+        dataset_info = DatasetWithInfo.from_name(config["basic"]["dataset_name"])
+
+        dataset_info_part_1, dataset_info_part_2 = DatasetWithInfo.split_into_two(
+            dataset_info=dataset_info,
+            seed=global_seed,
+        )
+        collected_results["info"]["dataset"] = {
+            "name": dataset_info.name,
+            "part_1": {
+                "train": len(dataset_info_part_1.train_set),
+                "val": len(dataset_info_part_1.val_set),
+                "test": len(dataset_info_part_1.test_set),
+            },
+            "part_2": {
+                "train": len(dataset_info_part_2.train_set),
+                "val": len(dataset_info_part_2.val_set),
+                "test": len(dataset_info_part_2.test_set),
+            },
+        }
+        # ------------------- 全局设置一次随机种子
+        fix_seed(global_seed)
+        # ------------------- 初始化教师的数据增强
+        try:
+            data_transform_teacher_cls: Type[da_abc.MakeTransforms] = getattr(
+                data_augs, config["basic"]["teacher"]["data_transform"]
+            )
+        except AttributeError as e:
+            raise ValueError("Data transform class not found") from e
+
+        # ------------------- 获得教师和学生的模型类
+        img_h = dataset_info.shape[1]
+        model_modules = importlib.import_module(f"models.size_{img_h}")
+
+        try:
+            teacher_model_cls: Type[nn.Module] = getattr(
+                model_modules, config["basic"]["teacher"]["model"]
+            )
+        except AttributeError as e:
+            raise ValueError("Model class not found") from e
+
+        # ------------------- 初始化 base_train 阶段模块
+        self._hash_and_replace_conf_default_id(config["base_train"])
+
+        normal_trainer = NormalTrainerFactory.create(
+            config["base_train"],
+            model_class=teacher_model_cls,
+            dataset_info=dataset_info_part_1,
+            data_transform_class=data_transform_teacher_cls,
+            seed=global_seed,
+            make_test_per_epochs=make_test_per_epochs,
+            save_ckpts_per_epochs=save_ckpts_per_epochs,
+        )
+
+        # ------------------- 获取后门目标标签
+        target_label = config["backdoor"]["target_label"]
+        # 后门的配置影响到后面实验，也要加入哈希链
+        self._config_hasher.chain_hash(config["backdoor"])
+
+        # ------------------- 初始化 trigger_gen 阶段模块
+        self._hash_and_replace_conf_default_id(config["trigger_gen"])
+
+        trigger_generator = TriggerGeneratorFactory.create(
+            config["trigger_gen"],
+            normal_trainer=normal_trainer,
+            dataset_info=dataset_info_part_1,
+            data_transform_class=data_transform_teacher_cls,
+            target_label=target_label,
+            seed=global_seed,
+        )
+
+        # ------------------- 初始化 data_poison 阶段模块
+        self._hash_and_replace_conf_default_id(config["data_poison"])
+
+        data_poisoner = DataPoisonerFactory.create(
+            config["data_poison"],
+            normal_trainer=normal_trainer,
+            trigger_gen=trigger_generator,
+            dataset_info=dataset_info_part_1,
+            data_transform_class=data_transform_teacher_cls,
+            target_label=target_label,
+            seed=global_seed,
+        )
+
+        # ------------------- 初始化 teacher_tune 阶段模块
+        self._hash_and_replace_conf_default_id(config["teacher_tune"])
+
+        teacher_tuner = ModelTunerFactory.create(
+            config["teacher_tune"],
+            normal_trainer=normal_trainer,
+            trigger_gen=trigger_generator,
+            data_poisoner=data_poisoner,
+            target_label=target_label,
+            dataset_info=dataset_info_part_1,
+            data_transform_class=data_transform_teacher_cls,
+            seed=global_seed,
+            make_test_per_epochs=make_test_per_epochs,
+            save_ckpts_per_epochs=save_ckpts_per_epochs,
+        )
+
+        print_section(f"BackWeak Experiment [{self._exp_result_name}] Start")
+
+        # 触发整个实验流程
+        teacher_tuner.get_tuned_model()
+
+        # 实验完成后记录信息
+        stage_obj_pairs: list[tuple[str, ExpBase]] = [
+            ("base_train", normal_trainer),
+            ("trigger_gen", trigger_generator),
+            ("data_poison", data_poisoner),
+            ("teacher_tune", teacher_tuner),
+        ]
+        for stage_name, stage_obj in stage_obj_pairs:
+            time_elapsed = stage_obj.get_time_elapsed()
+            total_time_elapsed += time_elapsed
+            collected_results["info"][stage_name] = {
+                "id": stage_obj.exp_id,
+                "time_elapsed": time_elapsed,
+                "info_path": stage_obj.get_exp_info_path(),
+            }
+
+        # 总耗时
+        collected_results["info"]["total_time_elapsed"] = total_time_elapsed
+
+        self._target_label = target_label
+        self._dataset_info_part_1 = dataset_info_part_1
+        self._dataset_info_part_2 = dataset_info_part_2
+        self._data_transform_teacher_cls = data_transform_teacher_cls
+        self._normal_trainer = normal_trainer
+        self._trigger_generator = trigger_generator
+        self._teacher_tuner = teacher_tuner
+        self._model_modules = model_modules
+        self._global_seed = global_seed
+        self._make_test_per_epochs = make_test_per_epochs
+        self._save_ckpts_per_epochs = save_ckpts_per_epochs
+        self._collected_results = collected_results
+
     def run(self):
         """
         运行单次 BackWeak 实验流程
@@ -113,7 +269,14 @@ class BackWeakExperiment(BackdoorExperimentBase):
         config = self._config
 
         # ------------------------- 对防御部分的配置进行处理
-        defense_config = config["defense"]
+        defense_config: dict = config.get(
+            "defense",
+            {
+                "defender": "none",
+                "for": "teacher",
+                "params": {},
+            },
+        )
         defender_module_name = defense_config["defender"]
         defender_for = defense_config["for"]  # 标记是防御教师还是学生模型
         defender_params = defense_config.get("params", {})
@@ -304,7 +467,12 @@ class BackWeakExperiment(BackdoorExperimentBase):
                     }
 
         # -------------------------- 看看需不需要测试触发器的可见性指标
-        trigger_test_config = config["test_trigger"]
+        trigger_test_config: dict = config.get(
+            "test_trigger",
+            {
+                "perform": False,
+            },
+        )
 
         if trigger_test_config["perform"]:
             trigger_vis_save_dir = os.path.join(
@@ -337,162 +505,6 @@ class BackWeakExperiment(BackdoorExperimentBase):
             raise RuntimeError(
                 f"Unable to save experiment result to {exp_result_save_path}"
             ) from e
-
-    def inject_backdoor(self):
-        """
-        执行后门教师模型训练流程
-        """
-        config = self._config
-        # 配置哈希链，前面阶段发生变化，后面阶段全都要重来
-        self._config_hasher.chain_hash(config["basic"])
-
-        # 实验结果收集
-        collected_results = {"info": {}, "results": {}}  # 实验追溯信息, 实验结果
-
-        # 记录总共耗时
-        total_time_elapsed = 0.0
-
-        # ------------------- 全局使用的配置
-        global_seed = config["basic"]["seed"]
-        make_test_per_epochs = config["validate"]["make_test_per_epochs"]
-        save_ckpts_per_epochs = config["validate"]["save_ckpts_per_epochs"]
-
-        # ------------------- 获取数据集并进行划分
-        dataset_info = DatasetWithInfo.from_name(config["basic"]["dataset_name"])
-
-        dataset_info_part_1, dataset_info_part_2 = DatasetWithInfo.split_into_two(
-            dataset_info=dataset_info,
-            seed=global_seed,
-        )
-        collected_results["info"]["dataset"] = {
-            "name": dataset_info.name,
-            "part_1": {
-                "train": len(dataset_info_part_1.train_set),
-                "val": len(dataset_info_part_1.val_set),
-                "test": len(dataset_info_part_1.test_set),
-            },
-            "part_2": {
-                "train": len(dataset_info_part_2.train_set),
-                "val": len(dataset_info_part_2.val_set),
-                "test": len(dataset_info_part_2.test_set),
-            },
-        }
-        # ------------------- 全局设置一次随机种子
-        fix_seed(global_seed)
-        # ------------------- 初始化教师的数据增强
-        try:
-            data_transform_teacher_cls: Type[da_abc.MakeTransforms] = getattr(
-                data_augs, config["basic"]["teacher"]["data_transform"]
-            )
-        except AttributeError as e:
-            raise ValueError("Data transform class not found") from e
-
-        # ------------------- 获得教师和学生的模型类
-        img_h = dataset_info.shape[1]
-        model_modules = importlib.import_module(f"models.size_{img_h}")
-
-        try:
-            teacher_model_cls: Type[nn.Module] = getattr(
-                model_modules, config["basic"]["teacher"]["model"]
-            )
-        except AttributeError as e:
-            raise ValueError("Model class not found") from e
-
-        # ------------------- 初始化 base_train 阶段模块
-        self._hash_and_replace_conf_default_id(config["base_train"])
-
-        normal_trainer = NormalTrainerFactory.create(
-            config["base_train"],
-            model_class=teacher_model_cls,
-            dataset_info=dataset_info_part_1,
-            data_transform_class=data_transform_teacher_cls,
-            seed=global_seed,
-            make_test_per_epochs=make_test_per_epochs,
-            save_ckpts_per_epochs=save_ckpts_per_epochs,
-        )
-
-        # ------------------- 获取后门目标标签
-        target_label = config["backdoor"]["target_label"]
-        # 后门的配置影响到后面实验，也要加入哈希链
-        self._config_hasher.chain_hash(config["backdoor"])
-
-        # ------------------- 初始化 trigger_gen 阶段模块
-        self._hash_and_replace_conf_default_id(config["trigger_gen"])
-
-        trigger_generator = TriggerGeneratorFactory.create(
-            config["trigger_gen"],
-            normal_trainer=normal_trainer,
-            dataset_info=dataset_info_part_1,
-            data_transform_class=data_transform_teacher_cls,
-            target_label=target_label,
-            seed=global_seed,
-        )
-
-        # ------------------- 初始化 data_poison 阶段模块
-        self._hash_and_replace_conf_default_id(config["data_poison"])
-
-        data_poisoner = DataPoisonerFactory.create(
-            config["data_poison"],
-            normal_trainer=normal_trainer,
-            trigger_gen=trigger_generator,
-            dataset_info=dataset_info_part_1,
-            data_transform_class=data_transform_teacher_cls,
-            target_label=target_label,
-            seed=global_seed,
-        )
-
-        # ------------------- 初始化 teacher_tune 阶段模块
-        self._hash_and_replace_conf_default_id(config["teacher_tune"])
-
-        teacher_tuner = ModelTunerFactory.create(
-            config["teacher_tune"],
-            normal_trainer=normal_trainer,
-            trigger_gen=trigger_generator,
-            data_poisoner=data_poisoner,
-            target_label=target_label,
-            dataset_info=dataset_info_part_1,
-            data_transform_class=data_transform_teacher_cls,
-            seed=global_seed,
-            make_test_per_epochs=make_test_per_epochs,
-            save_ckpts_per_epochs=save_ckpts_per_epochs,
-        )
-
-        print_section(f"BackWeak Experiment [{self._exp_result_name}] Start")
-
-        # 触发整个实验流程
-        teacher_tuner.get_tuned_model()
-
-        # 实验完成后记录信息
-        stage_obj_pairs: list[tuple[str, ExpBase]] = [
-            ("base_train", normal_trainer),
-            ("trigger_gen", trigger_generator),
-            ("data_poison", data_poisoner),
-            ("teacher_tune", teacher_tuner),
-        ]
-        for stage_name, stage_obj in stage_obj_pairs:
-            time_elapsed = stage_obj.get_time_elapsed()
-            total_time_elapsed += time_elapsed
-            collected_results["info"][stage_name] = {
-                "id": stage_obj.exp_id,
-                "time_elapsed": time_elapsed,
-                "info_path": stage_obj.get_exp_info_path(),
-            }
-
-        # 总耗时
-        collected_results["info"]["total_time_elapsed"] = total_time_elapsed
-
-        self._target_label = target_label
-        self._dataset_info_part_1 = dataset_info_part_1
-        self._dataset_info_part_2 = dataset_info_part_2
-        self._data_transform_teacher_cls = data_transform_teacher_cls
-        self._normal_trainer = normal_trainer
-        self._trigger_generator = trigger_generator
-        self._teacher_tuner = teacher_tuner
-        self._model_modules = model_modules
-        self._global_seed = global_seed
-        self._make_test_per_epochs = make_test_per_epochs
-        self._save_ckpts_per_epochs = save_ckpts_per_epochs
-        self._collected_results = collected_results
 
     def test_metrics(
         self, model: nn.Module, dataset_info: DatasetWithInfo = None
