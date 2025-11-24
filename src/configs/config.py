@@ -80,7 +80,7 @@ BACKWEAK_EXP_CONFIG_STRUCTURE = {
     },
     "distill": {
         "distiller": (str, None),
-        "dataset_name": (str, "auto"),  # 默认采用 basic.dataset_name 分割的数据集
+        "dataset_name?": (str, "auto"),  # 默认采用 basic.dataset_name 分割的数据集
         "student": {
             "model": (str, None),
             "data_transform": (str, None),

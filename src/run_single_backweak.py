@@ -346,13 +346,11 @@ class BackWeakExperiment(BackdoorExperimentBase):
                 }
 
         # ------------------------- 对蒸馏配置进行处理
-        distill_config = config["distill"]
-        distill_dataset_name = distill_config["dataset_name"]
+        distill_config: dict = config["distill"]
+        distill_dataset_name = distill_config.get("dataset_name", "auto")
         # 如果蒸馏数据集名称是 "auto"，则采用 basic.dataset_name 分割的数据集
         if distill_dataset_name == "auto":
             distill_dataset_info = self._dataset_info_part_2
-            # 这里加的比较晚了，实验都跑了很多了，为了屎山兼容，这里临时移除掉 dataset_name 字段再哈希，看到这里的朋友可以把这行移除掉哦 (。_。)
-            del distill_config["dataset_name"]
         else:
             # 否则采用指定的蒸馏集
             distill_dataset_info = DatasetWithInfo.from_name(distill_dataset_name)
