@@ -18,7 +18,7 @@ from tqdm.auto import tqdm
 
 from utils.data import DatasetWithInfo, DataLoaderDataIter, TransformedDataset
 from data_augs import MakeSimpleTransforms
-from utils.funcs import auto_select_device, temp_seed, get_timestamp,print_section
+from utils.funcs import auto_select_device, temp_seed, get_timestamp, print_section
 
 from defense_modules.abc import DefenseModule
 from configs import TENSORBOARD_LOGS_PATH, CHECKPOINTS_SAVE_PATH
@@ -42,6 +42,7 @@ class NeuralCleanse(DefenseModule):
         patience=5,
         epsilon=1e-7,
         cost_factor=1.5,
+        anomaly_threshold=2.0,
         seed=42,
         **kwargs,
     ):
@@ -60,6 +61,8 @@ class NeuralCleanse(DefenseModule):
         :param patience: 动态调整 cost 时的耐心轮数，防止抖动
         :param epsilon: 用于数值稳定性的极小值
         :param cost_factor: 每次调整 cost 时的乘数因子
+        :param anomaly_threshold: 异常指数阈值，超过该值则认为检测到后门
+        :param seed: 随机种子
         """
         self._test_id = test_id
         self._model = copy.deepcopy(model)  # 不影响原模型
@@ -74,6 +77,7 @@ class NeuralCleanse(DefenseModule):
         self._patience = patience
         self._epsilon = epsilon
         self._cost_factor = cost_factor
+        self._anomaly_threshold = anomaly_threshold
         self._seed = seed
         self._save_dir = os.path.join(_ckpt_save_dir, test_id)
         self._data_loader = DataLoader(
@@ -296,12 +300,12 @@ class NeuralCleanse(DefenseModule):
 
     def _mad_outlier_detection(
         self, l1_norms: list[float]
-    ) -> tuple[torch.Tensor, int, float]:
+    ) -> tuple[torch.Tensor, int, float, torch.Tensor]:
         """
         Mean Absolute Deviation 异常值检测
 
         :param l1_norms: 各类别触发器的 L1 范数列表
-        :return: 异常指数张量, 最小 L1 范数对应的标签, 最小 L1 范数对应的异常指数
+        :return: 异常指数张量, 最小 L1 范数对应的标签, 最小 L1 范数对应的异常指数, 所有异常标签张量
         """
         l1_norms = torch.tensor(l1_norms, dtype=torch.float32)
 
@@ -316,11 +320,18 @@ class NeuralCleanse(DefenseModule):
         mad = 1e-9 if mad == 0 else mad
         anomaly_indices = abs_deviations / mad
 
-        # 最小 L1 NORM 下标
-        min_l1_label = torch.argmin(l1_norms).item()
-        anomaly_score_of_min_l1 = anomaly_indices[min_l1_label].item()
+        # 筛选出所有大于阈值的异常点中 L1 范数最小的那个
+        suspicious_labels = torch.where(anomaly_indices > self._anomaly_threshold)[0]
+        min_l1_label = -1
+        anomaly_score_of_min_l1 = -1.0
+        min_l1_norm = float("inf")
+        for label in suspicious_labels:
+            if l1_norms[label] < min_l1_norm:
+                min_l1_norm = l1_norms[label]
+                min_l1_label = label.item()
+                anomaly_score_of_min_l1 = anomaly_indices[label].item()
 
-        return anomaly_indices, min_l1_label, anomaly_score_of_min_l1
+        return anomaly_indices, min_l1_label, anomaly_score_of_min_l1, suspicious_labels
 
     def detect(self):
         """
@@ -373,7 +384,7 @@ class NeuralCleanse(DefenseModule):
         # 组装所有的 L1 范数，进行异常值检测
         l1_norms = [label_to_info[i][2] for i in range(self._dataset_info.num_classes)]
 
-        anomaly_indices, detected_label, detected_anomaly_index = (
+        anomaly_indices, detected_label, detected_anomaly_index, suspicious_labels = (
             self._mad_outlier_detection(l1_norms)
         )
 
@@ -381,11 +392,12 @@ class NeuralCleanse(DefenseModule):
             "anomaly_indices": anomaly_indices.tolist(),
             "detected_label": detected_label,
             "detected_anomaly_index": detected_anomaly_index,
+            "suspicious_labels": suspicious_labels.tolist(),
         }
 
         tb_writer.add_text(
             "Detection_Result",
-            f"Detected Label: {detected_label}, and its Anomaly Index: {detected_anomaly_index:.4f}\nAnomaly Indices: {anomaly_indices.tolist()}",
+            f"Detected Label: {detected_label}, and its Anomaly Index: {detected_anomaly_index:.4f}\nAnomaly Indices: {anomaly_indices.tolist()}\nSuspicious Labels: {suspicious_labels.tolist()}",
         )
 
         # 保存检测结果
