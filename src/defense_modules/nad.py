@@ -18,7 +18,7 @@ from tqdm.auto import tqdm
 from utils.data import DatasetWithInfo, DataLoaderDataIter, TransformedDataset
 from utils.data_funcs import balanced_split_into_two
 from data_augs import MakeSimpleTransforms
-from utils.funcs import auto_select_device, temp_seed, print_section
+from utils.funcs import auto_select_device, temp_seed, print_section, auto_num_workers
 
 from defense_modules.abc import DefenseModule
 from configs import TENSORBOARD_LOGS_PATH, CHECKPOINTS_SAVE_PATH
@@ -128,7 +128,7 @@ class NAD(DefenseModule):
             ),
             batch_size=self._batch_size,
             shuffle=True,
-            num_workers=4,
+            num_workers=auto_num_workers(),
             pin_memory=True,
         )
         os.makedirs(self._save_dir, exist_ok=True)

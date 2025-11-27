@@ -21,7 +21,13 @@ from sklearn import metrics
 from utils.data import DatasetWithInfo, TransformedDataset
 from utils.data_funcs import balanced_split_into_two
 from data_augs import MakeSimpleTransforms
-from utils.funcs import auto_select_device, temp_seed, get_timestamp, print_section
+from utils.funcs import (
+    auto_select_device,
+    get_timestamp,
+    print_section,
+    auto_num_workers,
+    temp_seed,
+)
 
 from modules.abc import TriggerGenerator
 from defense_modules.abc import DefenseModule
@@ -75,10 +81,11 @@ class ScaleUp(DefenseModule):
             ),
             batch_size=128,
             shuffle=True,
-            num_workers=4,
+            num_workers=auto_num_workers(),
         )
         self._data_limited = False
         self._T = T
+        self._seed = seed
         os.makedirs(self._save_dir, exist_ok=True)
 
         # 准备良性样本
@@ -98,8 +105,8 @@ class ScaleUp(DefenseModule):
                     transform=self._transforms_maker.normalize_standardize,
                 ),
                 batch_size=128,
-                shuffle=True,
-                num_workers=4,
+                shuffle=False,
+                num_workers=auto_num_workers(),
             )
             device = auto_select_device()
             self._model.to(device)
@@ -203,7 +210,6 @@ class ScaleUp(DefenseModule):
 
         self._model.to(device)
         self._model.eval()
-        self._model.requires_grad_(False)
 
         num_factors = len(self._scaling_factors)
 
@@ -275,11 +281,11 @@ class ScaleUp(DefenseModule):
             batch_spc[correct_mask],
         )
 
-    def detect(self):
+    def detect(self) -> dict:
         """
         使用 SCALE-UP 方法检测输入
 
-        :return: 检测结果字典, { "normal_avg_probs": list, "triggered_avg_probs": list }
+        :return: 检测结果字典
         """
         tensorboard_log_id = f"scale_up_{self._test_id}"
         tensorboard_log_dir = os.path.join(TENSORBOARD_LOGS_PATH, tensorboard_log_id)
@@ -301,46 +307,47 @@ class ScaleUp(DefenseModule):
         fp = 0.0  # 预测为触发图像，实际为正常图像
         fn = 0.0  # 预测为正常图像，实际为触发图像
 
-        for images, labels in tqdm(self._data_loader, desc="SCALE-UP Detection"):
-            images: torch.Tensor = images.to(device)
-            labels: torch.Tensor = labels.to(device)
-            triggered_images = self._trigger_generator.apply_trigger(images)
+        with temp_seed(self._seed):
+            for images, labels in tqdm(self._data_loader, desc="SCALE-UP Detection"):
+                images: torch.Tensor = images.to(device)
+                labels: torch.Tensor = labels.to(device)
+                triggered_images = self._trigger_generator.apply_trigger(images)
 
-            # 先在正常图像上检测
-            original_probs, scaled_probs, original_spc = self._detect_batch(
-                images, labels
-            )
-            # 拼接起来
-            normal_scale_probs = torch.cat(
-                [original_probs, scaled_probs], dim=1
-            )  # shape (B?, num_factors + 1)
+                # 先在正常图像上检测
+                original_probs, scaled_probs, original_spc = self._detect_batch(
+                    images, labels
+                )
+                # 拼接起来
+                normal_scale_probs = torch.cat(
+                    [original_probs, scaled_probs], dim=1
+                )  # shape (B?, num_factors + 1)
 
-            # 预测为触发图像的样本
-            original_spc_pos_preds = (original_spc >= self._T).sum().item()
-            # 预测为正常图像的样本
-            original_spc_neg_preds = (original_spc < self._T).sum().item()
-            tn += original_spc_neg_preds
-            fp += original_spc_pos_preds
+                # 预测为触发图像的样本
+                original_spc_pos_preds = (original_spc >= self._T).sum().item()
+                # 预测为正常图像的样本
+                original_spc_neg_preds = (original_spc < self._T).sum().item()
+                tn += original_spc_neg_preds
+                fp += original_spc_pos_preds
 
-            # 再在带有触发器的图像上检测
-            target_labels = torch.full_like(labels, self._target_label)
-            triggered_original_probs, triggered_scaled_probs, triggered_spc = (
-                self._detect_batch(triggered_images, target_labels)
-            )
-            triggered_scale_probs = torch.cat(
-                [triggered_original_probs, triggered_scaled_probs], dim=1
-            )  # shape (B?, num_factors + 1)
+                # 再在带有触发器的图像上检测
+                target_labels = torch.full_like(labels, self._target_label)
+                triggered_original_probs, triggered_scaled_probs, triggered_spc = (
+                    self._detect_batch(triggered_images, target_labels)
+                )
+                triggered_scale_probs = torch.cat(
+                    [triggered_original_probs, triggered_scaled_probs], dim=1
+                )  # shape (B?, num_factors + 1)
 
-            triggered_spc_pos_preds = (triggered_spc >= self._T).sum().item()
-            triggered_spc_neg_preds = (triggered_spc < self._T).sum().item()
+                triggered_spc_pos_preds = (triggered_spc >= self._T).sum().item()
+                triggered_spc_neg_preds = (triggered_spc < self._T).sum().item()
 
-            tp += triggered_spc_pos_preds
-            fn += triggered_spc_neg_preds
+                tp += triggered_spc_pos_preds
+                fn += triggered_spc_neg_preds
 
-            normal_all_results_list.append(normal_scale_probs)
-            triggered_all_results_list.append(triggered_scale_probs)
-            normal_all_spc_list.append(original_spc)
-            triggered_all_spc_list.append(triggered_spc)
+                normal_all_results_list.append(normal_scale_probs)
+                triggered_all_results_list.append(triggered_scale_probs)
+                normal_all_spc_list.append(original_spc)
+                triggered_all_spc_list.append(triggered_spc)
 
         # 计算 TPR, FPR
         tpr_spc = tp / (tp + fn) if (tp + fn) > 0 else 0.0
@@ -426,8 +433,6 @@ class ScaleUp(DefenseModule):
                 factor,
             )
 
-        tb_writer.close()
-
         # 保存结果
         result_save_path = os.path.join(
             self._save_dir, f"detection_results_{get_timestamp()}.json"
@@ -444,5 +449,12 @@ class ScaleUp(DefenseModule):
 
         with open(result_save_path, "w") as f:
             json.dump(result, f, indent=4)
+
+        tb_writer.add_text(
+            "SCALE-UP Detection Results",
+            json.dumps(result, indent=4),
+        )
+
+        tb_writer.close()
 
         return result

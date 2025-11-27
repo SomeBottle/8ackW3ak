@@ -10,7 +10,7 @@ import random
 
 from torch.utils.data import Dataset, DataLoader
 from data_augs.abc import MakeTransforms
-from typing import Iterable, Type
+from typing import Iterable, Type, Iterator
 
 from utils.data_funcs import balanced_split_into_two
 from configs import DATASET_INFOS
@@ -304,7 +304,7 @@ class PoisonedDataset(Dataset):
         self,
         dataset: Dataset,
         data_shape: tuple[int, int, int],
-        trigger_gen: "TriggerGenerator", # type: ignore
+        trigger_gen: "TriggerGenerator",  # type: ignore
         indexes: Iterable[int],
         target_label: int,
         data_transform_class: Type[MakeTransforms],
@@ -335,12 +335,14 @@ class PoisonedDataset(Dataset):
             image = self._data_transform.train_transforms(image)
         if index in self._indexes_set:
             # 该样本需要投毒
-            image = self._trigger_gen.apply_trigger(image, self._data_transform.tensor_trigger_transforms)
+            image = self._trigger_gen.apply_trigger(
+                image, self._data_transform.tensor_trigger_transforms
+            )
             label = self._target_label
         return image, label
 
 
-class DataLoaderDataIter:
+class DataLoaderDataIter(Iterator):
 
     def __init__(self, data_loader: DataLoader):
         """

@@ -18,7 +18,13 @@ from tqdm.auto import tqdm
 
 from utils.data import DatasetWithInfo, DataLoaderDataIter, TransformedDataset
 from data_augs import MakeSimpleTransforms
-from utils.funcs import auto_select_device, temp_seed, get_timestamp, print_section
+from utils.funcs import (
+    auto_select_device,
+    temp_seed,
+    get_timestamp,
+    print_section,
+    auto_num_workers,
+)
 
 from defense_modules.abc import DefenseModule
 from configs import TENSORBOARD_LOGS_PATH, CHECKPOINTS_SAVE_PATH
@@ -87,7 +93,7 @@ class NeuralCleanse(DefenseModule):
             ),
             batch_size=batch_size,
             shuffle=True,
-            num_workers=4,
+            num_workers=auto_num_workers(),
         )
         os.makedirs(self._save_dir, exist_ok=True)
 
@@ -333,7 +339,7 @@ class NeuralCleanse(DefenseModule):
 
         return anomaly_indices, min_l1_label, anomaly_score_of_min_l1, suspicious_labels
 
-    def detect(self):
+    def detect(self) -> dict:
         """
         执行 Neural Cleanse 检测
 

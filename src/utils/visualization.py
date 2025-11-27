@@ -261,6 +261,7 @@ def visualize_roc_curve(
     :param x_label: x 轴标签
     :param y_label: y 轴标签
     :param save_to: 保存路径，如果为 None 则直接 plt.show()
+    :return: 图片的 numpy array 格式, shape (H, W, C)
     """
     plt.close()
     _, ax = plt.subplots()
@@ -269,6 +270,73 @@ def visualize_roc_curve(
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
     ax.legend()
+    if save_to:
+        _create_dir_if_not_exists(save_to)
+        plt.savefig(save_to, bbox_inches="tight")
+    else:
+        plt.show()
+
+    buf = BytesIO()
+    plt.savefig(buf, format="png")
+    buf.seek(0)
+    img = np.array(Image.open(buf))
+    buf.close()
+    return img
+
+
+def visualize_entropy_dist_histogram(
+    entropies_list: Iterable[
+        tuple[Tensor | np.ndarray, str] | tuple[Tensor | np.ndarray, str, str]
+    ],
+    title: str = "",
+    bins: int = 30,
+    x_label: str = "Entropy",
+    y_label: str = "Probability",
+    save_to: str | None = None,
+) -> np.ndarray:
+    """
+    可视化熵分布直方图
+
+    :param entropies_list: 熵值数组及其标签的可迭代对象，还支持定义颜色 [(entropies1, label1), (entropies2, label2), ...]，或者 [(entropies1, label1, color1), (entropies2, label2, color2), ...]
+    :param title: 标题
+    :param bins: 直方图的柱子数量
+    :param x_label: x 轴标签
+    :param y_label: y 轴标签
+    :param save_to: 保存路径，如果为 None 则直接 plt.show()
+    :return: 图片的 numpy array 格式, shape (H, W, C)
+    :raise ValueError: 如果 entropies_list 中的元素格式不正确
+    """
+    plt.close()
+    plt.figure()
+
+    for item in entropies_list:
+        if len(item) == 2:
+            entropies, label = item
+            color = None
+        elif len(item) == 3:
+            entropies, label, color = item
+        else:
+            raise ValueError(
+                "Each item in entropies_list must be a tuple of (entropies, label) or (entropies, label, color)."
+            )
+
+        if isinstance(entropies, Tensor):
+            entropies = entropies.detach().cpu().numpy()
+
+        plt.hist(
+            entropies,
+            bins=bins,
+            alpha=0.5,
+            label=label,
+            color=color,
+            weights=np.ones_like(entropies) / len(entropies),
+        )
+
+    plt.title(title, fontsize="smaller")
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.legend()
+
     if save_to:
         _create_dir_if_not_exists(save_to)
         plt.savefig(save_to, bbox_inches="tight")
