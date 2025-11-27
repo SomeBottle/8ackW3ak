@@ -157,7 +157,7 @@ Implemented in [`defense_modules/scale_up.py`](./src/defense_modules/scale_up.py
 
 Implemented in [`defense_modules/strip.py`](./src/defense_modules/strip.py).  
 
-* Following the [official implementation](https://github.com/garrisongys/STRIP/blob/master/STRIP_CIFAR10DeepArchit_Tb.ipynb), but in a more concurrent way.  
+* Following the [official implementation](https://github.com/garrisongys/STRIP/blob/master/STRIP_CIFAR10DeepArchit_Tb.ipynb), but in a more parallel manner.  
 * Paper: [STRIP: A defence against trojan attacks on deep neural networks](https://arxiv.org/pdf/1902.06531)  
 
 ## Disclaimer
