@@ -140,6 +140,12 @@ Implemented in [`reprod_modules/scar`](./src/reprod_modules/scar/).
 * Paper: [Taught Well Learned Ill: Towards Distillation-conditional Backdoor Attack](https://arxiv.org/pdf/2509.23871)  
 * (2025.11.17) Glad to see they finally released their official code: https://github.com/WhitolfChen/SCAR  
 
+### Neural Cleanse
+
+Implemented in [`defense_modules/neural_cleanse.py`](./src/defense_modules/neural_cleanse.py). 
+
+* Paper: [Neural Cleanse: Identifying and Mitigating Backdoor Attacks in Neural Networks](https://bolunwang.github.io/assets/docs/backdoor-sp19.pdf)  
+
 ### SCALE-UP
 
 Implemented in [`defense_modules/scale_up.py`](./src/defense_modules/scale_up.py).  
