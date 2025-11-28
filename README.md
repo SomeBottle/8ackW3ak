@@ -132,6 +132,10 @@ To gather the experimental results, you may go to the output directory you speci
 We made some unofficial implementations of the previous work. No more "[coming soon](https://archive.is/6gA9Y)", plz!   
 (ಥ皿ಥ) 
 
+<details>
+
+<summary><b>CLICK TO EXPAND</b> ヾ(￣▽￣) </summary>
+
 ### ADBA
 
 Implemented in [`reprod_modules/adba`](./src/reprod_modules/adba/).  
@@ -165,6 +169,17 @@ Implemented in [`defense_modules/strip.py`](./src/defense_modules/strip.py).
 
 * Following the [official implementation](https://github.com/garrisongys/STRIP/blob/master/STRIP_CIFAR10DeepArchit_Tb.ipynb), but in a more parallel manner.  
 * Paper: [STRIP: A defence against trojan attacks on deep neural networks](https://arxiv.org/pdf/1902.06531)  
+
+### BAN
+
+Implemented in [`defense_modules/ban`](./src/defense_modules/ban.py).  
+
+* We fix some really baffling stuff in the [official implementation](https://github.com/xiaoyunxxy/ban), making it more clear.  
+* Paper: [BAN: detecting backdoors activated by adversarial neuron noise](https://proceedings.neurips.cc/paper_files/paper/2024/file/cfaccbd9b5e62562779351ebcb140c94-Paper-Conference.pdf)  
+
+------
+
+</details>
 
 ## Disclaimer
 
