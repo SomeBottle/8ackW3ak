@@ -119,6 +119,17 @@ class RegNet(ModelBase):
             return [feature_l_2, feature_l_1], out
         return out
 
+    def feature_to_output(self, feature: torch.Tensor, feat_level: int) -> torch.Tensor:
+        if feat_level == 1:
+            out = self.linear(feature)
+        elif feat_level == 2:
+            out = F.adaptive_avg_pool2d(feature, (1, 1))
+            out = out.view(out.size(0), -1)
+            out = self.linear(out)
+        else:
+            raise ValueError(f"Unsupported feat_level: {feat_level}")
+        return out
+
     @property
     def classifier(self):
         return self.linear

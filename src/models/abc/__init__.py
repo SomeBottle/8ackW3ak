@@ -34,3 +34,14 @@ class ModelBase(nn.Module, ABC):
                     out 为分类结果张量，形状为 (B, num_classes)。
         """
         pass
+
+    @abstractmethod
+    def feature_to_output(self, feature: torch.Tensor, feat_level: int) -> torch.Tensor:
+        """
+        将指定特征映射到分类结果
+
+        :param feature: 特征张量
+        :param feat_level: 特征层级，1 表示倒数第一个特征，2 表示倒数第二个特征，依此类推
+        :return: 分类结果张量，形状为 (B, num_classes)
+        """
+        pass

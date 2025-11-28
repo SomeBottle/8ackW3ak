@@ -160,6 +160,18 @@ class ShuffleNetV2(ModelBase):
             return [feature_l_2, feature_l_1], out
         return out
 
+    def feature_to_output(self, feature: torch.Tensor, feat_level: int) -> torch.Tensor:
+        if feat_level == 1:
+            out = self.linear(feature)
+            return out
+        elif feat_level == 2:
+            out = F.avg_pool2d(feature, 4)
+            out = out.view(out.size(0), -1)
+            out = self.linear(out)
+            return out
+        else:
+            raise ValueError(f"Invalid feat_level: {feat_level}")
+
     @property
     def classifier(self) -> nn.Module:
         return self.linear

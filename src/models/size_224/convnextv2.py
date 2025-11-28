@@ -176,6 +176,18 @@ class ConvNeXtV2(ModelBase):
             return [feature_l_2, feature_l_1], x
         return x
 
+    def feature_to_output(self, feature: torch.Tensor, feat_level: int) -> torch.Tensor:
+        if feat_level == 1:
+            out = self.head(feature)
+        elif feat_level == 2:
+            out = self.norm(
+                feature.mean([-2, -1])
+            )  # global average pooling, (N, C, H, W) -> (N, C)
+            out = self.head(out)
+        else:
+            raise ValueError(f"Unsupported feat_level: {feat_level}")
+        return out
+
     @property
     def classifier(self) -> nn.Module:
         return self.head

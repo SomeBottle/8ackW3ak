@@ -149,6 +149,17 @@ class MobileNetV2(ModelBase):
             return [feature_l_2, feature_l_1], x
         return x
 
+    def feature_to_output(self, feature: torch.Tensor, feat_level: int) -> torch.Tensor:
+        if feat_level == 1:
+            out = self._classifier(feature)
+        elif feat_level == 2:
+            out = self.avgpool(feature)
+            out = out.view(out.size(0), -1)
+            out = self._classifier(out)
+        else:
+            raise ValueError(f"Unsupported feat_level: {feat_level}")
+        return out
+
     @property
     def classifier(self) -> nn.Module:
         return self._classifier

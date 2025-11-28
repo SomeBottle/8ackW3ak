@@ -154,6 +154,17 @@ class ResNet(ModelBase):
             return [feature_l_2, feature_l_1], x
         return x
 
+    def feature_to_output(self, feature, feat_level: int):
+        if feat_level == 1:
+            out = self.group2(feature)
+        elif feat_level == 2:
+            out = self.avgpool(feature)
+            out = out.view(out.size(0), -1)
+            out = self.group2(out)
+        else:
+            raise ValueError(f"Unsupported feat_level: {feat_level}")
+        return out
+
     @property
     def classifier(self) -> nn.Module:
         return self.group2.fc

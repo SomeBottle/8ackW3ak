@@ -80,9 +80,7 @@ class DenseNet(ModelBase):
             in_planes += self.growth_rate
         return nn.Sequential(*layers)
 
-    def forward(
-        self, x, feat=False
-    ):
+    def forward(self, x, feat=False):
         out = self.conv1(x)
         out = self.trans1(self.dense1(out))
         out = self.trans2(self.dense2(out))
@@ -97,6 +95,20 @@ class DenseNet(ModelBase):
             return [feature_l_2, feature_l_1], out
         return out
 
+    def feature_to_output(self, feature: torch.Tensor, feat_level: int) -> torch.Tensor:
+        if feat_level == 1:
+            # 倒数第一个特征
+            out = self.linear(feature)
+        elif feat_level == 2:
+            # 倒数第二个特征
+            out = F.avg_pool2d(F.relu(self.bn(feature)), 4)
+            out = out.view(out.size(0), -1)
+            out = self.linear(out)
+        else:
+            raise ValueError(f"Unsupported feat_level: {feat_level}")
+        return out
+    
+    @property
     def classifier(self) -> nn.Module:
         return self.linear
 
