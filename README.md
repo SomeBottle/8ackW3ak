@@ -24,7 +24,9 @@ Alternatively, you can install the dependencies in your own Python environment w
 pip install -r requirements.txt
 ```
 
-## Try It Out 
+## Try It Out
+
+In this section, we provide a quick guide to run some example experiments using our Docker image.
 
 <details>
 
@@ -32,7 +34,7 @@ pip install -r requirements.txt
 
 ### 1. Prepare the Environment
 
-First, install Docker with GPU support toolkit, and pull the image:
+First, install Docker with [GPU support](https://docs.docker.com/compose/how-tos/gpu-support/) toolkit, and pull the image:
 
 ```bash
 docker pull somebottle/jupyter-torch:0.0.7
@@ -41,16 +43,17 @@ docker pull somebottle/jupyter-torch:0.0.7
 Then, start a container with your working directory mounted, ports mapped and password set:
 
 ```bash
+# If shm-size is not specified, it may easily run out of shared memory when loading data batches with multiple workers. Docker only allocates 64 MiB by default.  
 docker run --gpus all -d --restart=unless-stopped --shm-size=16g --env JUPYTER_PASSWORD='EL_PSY_KONGROO' -v <Your working directory>:/app  -p 9527:9527 -p 9528:6006 --name=lab-jupyter somebottle/jupyter-torch:0.0.7
 ```
 
-Now you can access JupyterLab in your browser at `http://<your_addr>:9527` using the password you set (e.g., `EL_PSY_KONGROO` above).
+Now you can access JupyterLab in your browser at `http://<your_host>:9527` using the password you set (e.g., `EL_PSY_KONGROO` above).
 
 ### 2. Prepare Code and Datasets
 
-Upload the code from `./src`, put it anywhere you like in the container (e.g., `/app`, the mount we set up earlier), and download the datasets mentioned above.  
+Upload the code from `./src`, put it anywhere you like **in the container** (`/app` is recommended, as it is the mount we set up earlier), and download the datasets mentioned above.  
 
-By default, the code [assumes](./src/configs/datasets.py#L7) that the datasets are placed in `./datasets`:  
+By default, the code [assumes](./src/configs/datasets.py#L7) that the datasets are placed in `./datasets`, so just put them there:  
 
 ```bash
 /app
@@ -87,6 +90,8 @@ By default, the code [assumes](./src/configs/datasets.py#L7) that the datasets a
 Create a new terminal in the JupyterLab and just have a try:  
 
 ```bash
+cd /app  # or wherever you put the code
+
 # BackWeak
 python run_single_backweak.py -c experiments/examples/VKD_BWCF.toml --od experiment_outputs/ -d cuda:0
 
@@ -101,7 +106,7 @@ python run_single_scar.py -c experiments/examples/RL_OSCF.toml --od experiment_o
 
 ### 4. View Logs and Results
 
-You can inspect the experiment logs via TensorBoard:   
+You can inspect the **detailed** experiment logs via TensorBoard:   
 
 * Start TensorBoard in the background:  
 
@@ -110,7 +115,7 @@ You can inspect the experiment logs via TensorBoard:
     ```
     > `./tb_logs` is the default TensorBoard logging directory specified in [`./src/configs/config.py`](./src/configs/config.py#L10). 
 
-* Then you can access it at `http://<your_addr>:9528`.  
+* Then you can access it at `http://<your_host>:9528` (the default TensorBoard port `6006` has been mapped to the host port `9528`).  
 
 To gather the experimental results, you may go to the output directory you specified (e.g., `experiment_outputs/` in the above commands).  
 
@@ -166,6 +171,13 @@ The code in this repository is provided **solely for academic research purposes*
 
 The authors assume no responsibility for any consequences arising from misuse or improper application of the materials provided herein.
 
+## Libraries Used
+
+Credits to the diligent work of open-source developers!  
+
+* [NiklasRosenstein/python-stablehash](https://github.com/NiklasRosenstein/python-stablehash) - [ [MIT License](./src/stablehash/LICENSE) ].  
+* [richzhang/PerceptualSimilarity](https://github.com/richzhang/PerceptualSimilarity/) - [ [BSD-2-Clause License](./src/lpips/LICENSE) ].  
+
 ## License
 
-MIT Licensed. 
+Licensed under the MIT License. 
