@@ -119,6 +119,7 @@ You can inspect the **detailed** experiment logs via TensorBoard:
 
 To gather the experimental results, you may go to the output directory you specified (e.g., `experiment_outputs/` in the above commands).  
 
+> 💡 **TIPS**
 > To inspect the logs of a specific component during an experiment, you may check the experiment outputs and find the corresponding `id`:  
 > ![find_exp_id](./pics/find_exp_id.png)  
 >
