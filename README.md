@@ -122,9 +122,9 @@ To gather the experimental results, you may go to the output directory you speci
 > 💡 **TIPS**  
 > To inspect the logs of a specific component during an experiment, you may check the experiment outputs and find the corresponding `id`:  
 > ![find_exp_id](./pics/find_exp_id.png)  
->
-> Then, you can filter the logs in TensorBoard using this `id`:
-> ![filter_tb_logs](./pics/filter_tb_logs.png)
+>  
+> Then, you can filter the logs in TensorBoard using this `id`:  
+> ![filter_tb_logs](./pics/filter_tb_logs.png)  
 </details>
 
 ## Unofficial implementations
