@@ -160,6 +160,9 @@ class MobileNetV2(ModelBase):
             raise ValueError(f"Unsupported feat_level: {feat_level}")
         return out
 
+    def get_gradcam_feature_layer(self) -> nn.Module:
+        return self.features[-1]
+
     @property
     def classifier(self) -> nn.Module:
         return self._classifier

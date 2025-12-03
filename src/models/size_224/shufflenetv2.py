@@ -172,6 +172,9 @@ class ShuffleNetV2(ModelBase):
         else:
             raise ValueError(f"Unsupported feat_level: {feat_level}")
         return out
+    
+    def get_gradcam_feature_layer(self) -> nn.Module:
+        return self.conv2
 
     @property
     def classifier(self) -> nn.Module:

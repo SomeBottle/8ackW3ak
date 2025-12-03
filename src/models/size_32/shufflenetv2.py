@@ -172,6 +172,9 @@ class ShuffleNetV2(ModelBase):
         else:
             raise ValueError(f"Invalid feat_level: {feat_level}")
 
+    def get_gradcam_feature_layer(self) -> nn.Module:
+        return self.conv2
+
     @property
     def classifier(self) -> nn.Module:
         return self.linear

@@ -45,3 +45,12 @@ class ModelBase(nn.Module, ABC):
         :return: 分类结果张量，形状为 (B, num_classes)
         """
         pass
+
+    @abstractmethod
+    def get_gradcam_feature_layer(self) -> nn.Module:
+        """
+        获取用于 Grad-CAM 可视化的特征层
+
+        :return: 特征层模块
+        """
+        pass

@@ -7,6 +7,7 @@ from .scale_up import ScaleUp
 from .nad import NAD
 from .strip import STRIP
 from .ban import BAN
+from .grad_cam import GradCAMVis
 
 __all__ = [
     "NeuralCleanse",
@@ -14,4 +15,5 @@ __all__ = [
     "NAD",
     "STRIP",
     "BAN",
+    "GradCAMVis",
 ]
