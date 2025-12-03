@@ -37,14 +37,14 @@ In this section, we provide a quick guide to run some example experiments using 
 First, install Docker with [GPU support](https://docs.docker.com/compose/how-tos/gpu-support/) toolkit, and pull the image:
 
 ```bash
-docker pull somebottle/jupyter-torch:0.0.7
+docker pull somebottle/jupyter-torch:0.0.8
 ```
 
 Then, start a container with your working directory mounted, ports mapped and password set:
 
 ```bash
 # If shm-size is not specified, it may easily run out of shared memory when loading data batches with multiple workers. Docker only allocates 64 MiB by default.  
-docker run --gpus all -d --restart=unless-stopped --shm-size=16g --env JUPYTER_PASSWORD='EL_PSY_KONGROO' -v <Your working directory>:/app  -p 9527:9527 -p 9528:6006 --name=lab-jupyter somebottle/jupyter-torch:0.0.7
+docker run --gpus all -d --restart=unless-stopped --shm-size=16g --env JUPYTER_PASSWORD='EL_PSY_KONGROO' -v <Your working directory>:/app  -p 9527:9527 -p 9528:6006 --name=lab-jupyter somebottle/jupyter-torch:0.0.8
 ```
 
 Now you can access JupyterLab in your browser at `http://<your_host>:9527` using the password you set (e.g., `EL_PSY_KONGROO` above).
@@ -120,10 +120,13 @@ You can inspect the **detailed** experiment logs via TensorBoard:
 To gather the experimental results, you may go to the output directory you specified (e.g., `experiment_outputs/` in the above commands).  
 
 > 💡 **TIPS**  
+> 
 > To inspect the logs of a specific component during an experiment, you may check the experiment outputs and find the corresponding `id`:  
+> 
 > ![find_exp_id](./pics/find_exp_id.png)  
 >  
 > Then, you can filter the logs in TensorBoard using this `id`:  
+> 
 > ![filter_tb_logs](./pics/filter_tb_logs.png)  
 </details>
 
@@ -192,7 +195,8 @@ The authors assume no responsibility for any consequences arising from misuse or
 Credits to the diligent work of open-source developers!  
 
 * [NiklasRosenstein/python-stablehash](https://github.com/NiklasRosenstein/python-stablehash) - [ [MIT License](./src/stablehash/LICENSE) ].  
-* [richzhang/PerceptualSimilarity](https://github.com/richzhang/PerceptualSimilarity/) - [ [BSD-2-Clause License](./src/lpips/LICENSE) ].  
+* [richzhang/PerceptualSimilarity](https://github.com/richzhang/PerceptualSimilarity) - [ [BSD-2-Clause License](./src/lpips/LICENSE) ].  
+* [jacobgil/pytorch-grad-cam](https://github.com/jacobgil/pytorch-grad-cam) - [ [MIT License](https://github.com/jacobgil/pytorch-grad-cam/blob/master/LICENSE) ].  
 
 ## License
 
